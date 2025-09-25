@@ -1,11 +1,12 @@
 import asyncio
 import threading
 from queue import Queue
+from typing import Optional
 
-def async_stream_thread(q: Queue, *args):
+def async_stream_thread(q: Queue, cancel_event: Optional[threading.Event], *args):
     async def inner_gen():
         try:
-            async for token in args[0].ask_llm_async_stream(*args[1:]):
+            async for token in args[0].ask_llm_async_stream(*args[1:], cancel_event=cancel_event):
                 q.put(token)
         except Exception as e:
             import logging

@@ -1,5 +1,5 @@
 import logging
-from .config import Config
+from app.config import Config
 
 def setup_logging():
     """Настройка логирования для приложения"""

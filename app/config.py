@@ -20,7 +20,11 @@ class Config:
     EMBEDDING_CACHE_SIZE: int = int(os.getenv("EMBEDDING_CACHE_SIZE", 500))
     
     # Model Configuration
-    DEFAULT_EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    # Embeddings provider: 'local' (sentence-transformers) or 'ollama'
+    EMBEDDINGS_PROVIDER: str = os.getenv("EMBEDDINGS_PROVIDER", "ollama")
+    DEFAULT_EMBEDDING_MODEL: str = os.getenv("DEFAULT_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    # Ollama embeddings model (e.g., 'all-minilm', 'nomic-embed-text')
+    OLLAMA_EMBED_MODEL: str = os.getenv("OLLAMA_EMBED_MODEL", "all-minilm")
     DEFAULT_LLM_MODEL: str = "Phi4-mini"
     
     # Debug Configuration

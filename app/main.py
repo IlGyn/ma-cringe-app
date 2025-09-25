@@ -3,23 +3,26 @@ from datetime import datetime
 from collections import OrderedDict
 
 # Импорт компонентов
-from .config import Config
-from .logging_config import setup_logging
-from .core.message_manager import MessageManager
-from .core.qdrant_manager import QdrantManager
-from .core.encoder_manager import EncoderManager
-from .clients.ollama_client import OllamaClient
-from .processors.file_processor import FileProcessor
-from .processors.validators import Validator
-from .ui.sidebar import render_sidebar
-from .ui.chat_interface import render_chat_interface
+from app.config import Config
+from app.logging_config import setup_logging
+from app.core.message_manager import MessageManager
+from app.core.qdrant_manager import QdrantManager
+from app.core.encoder_manager import EncoderManager
+from app.clients.ollama_client import OllamaClient
+from app.processors.file_processor import FileProcessor
+from app.processors.validators import Validator
+from app.ui.sidebar import render_sidebar
+from app.ui.chat_interface import render_chat_interface
+from app.core.AIState import AIState
 
 # Настройка логирования
 setup_logging()
 
 # Инициализация компонентов
 config = Config()
-qdrant_manager = QdrantManager(config.QDRANT_HOST, config.QDRANT_PORT, config.COLLECTION_NAME)
+# В Docker-сети используем имя контейнера вместо localhost
+qdrant_host = config.QDRANT_HOST
+qdrant_manager = QdrantManager(qdrant_host, config.QDRANT_PORT, config.COLLECTION_NAME)
 encoder_manager = EncoderManager()
 ollama_client = OllamaClient()
 file_processor = FileProcessor()
@@ -35,8 +38,9 @@ def main():
 
     # Инициализация состояния сессии
     if "encoder" not in st.session_state:
+        # Для provider='ollama' вернётся None, это ок
         st.session_state.encoder = encoder_manager.load_encoder(config.DEFAULT_EMBEDDING_MODEL)
-        qdrant_manager.init_collection(st.session_state.encoder)
+        qdrant_manager.init_collection(encoder_manager)
 
     if "messages" not in st.session_state:
         try:
@@ -76,10 +80,13 @@ def main():
     if "top_k" not in st.session_state:
         st.session_state.top_k = 40
 
+    if "ai_state" not in st.session_state:
+        st.session_state.ai_state = AIState(qdrant_manager, encoder_manager)
+
     # Рендеринг интерфейса
     (st.session_state.base_url, st.session_state.model, st.session_state.max_context,
-     st.session_state.max_tokens, st.session_state.temperature, st.session_state.top_p,
-     st.session_state.top_k, st.session_state.uploaded_files) = render_sidebar(
+    st.session_state.max_tokens, st.session_state.temperature, st.session_state.top_p,
+    st.session_state.top_k, st.session_state.uploaded_files) = render_sidebar(
         st.session_state.base_url, st.session_state.model, st.session_state.max_context,
         st.session_state.max_tokens, st.session_state.temperature, st.session_state.top_p,
         st.session_state.top_k, st.session_state.uploaded_files if "uploaded_files" in st.session_state else None,

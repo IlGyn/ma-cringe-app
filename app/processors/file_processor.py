@@ -29,7 +29,7 @@ except ImportError:
     XLSX_AVAILABLE = False
 
 from qdrant_client.http import models as qmodels
-from ..config import Config
+from app.config import Config
 
 class FileProcessor:
     def __init__(self):

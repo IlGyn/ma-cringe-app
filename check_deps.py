@@ -1,4 +1,3 @@
-# check_deps.py
 import sys
 import importlib.util
 import subprocess

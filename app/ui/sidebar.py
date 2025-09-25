@@ -1,8 +1,7 @@
 import streamlit as st
 import json
 from datetime import datetime
-from ..config import Config
-from ..core.embedding_cache import EmbeddingCache
+from app.config import Config
 
 def render_sidebar(base_url, model, max_context, max_tokens, temperature, top_p, top_k, uploaded_files,
                   qdrant_manager, encoder_manager, file_processor, validator):
@@ -11,19 +10,28 @@ def render_sidebar(base_url, model, max_context, max_tokens, temperature, top_p,
         base_url = st.text_input("Ollama URL", Config.OLLAMA_URL)
         model = st.text_input("Модель", Config.DEFAULT_LLM_MODEL)
         max_context = st.slider("Контекст для ответа", 2, 20, 6)
-        embedder = st.selectbox("Модель эмбеддингов", ["all-MiniLM-L6-v2", "all-mpnet-base-v2"])
+        embedder = st.text_input("Ollama embedding model", Config.OLLAMA_EMBED_MODEL)
         max_tokens = st.slider("Максимальная длина ответа", 50, 1000, 200)
         temperature = st.slider("Температура", 0.0, 1.5, 0.3)
         top_p = st.slider("Top-p", 0.1, 1.0, 0.8)
         top_k = st.slider("Top-k", 1, 100, 40)
 
         if st.button("🔄 Перезагрузить энкодер"):
-            # Импортируем encoder_manager для перезагрузки
-            from ..core.encoder_manager import EncoderManager
-            encoder_manager = EncoderManager()
-            st.session_state.encoder = encoder_manager.load_encoder(embedder)
-            qdrant_manager.init_collection(st.session_state.encoder)
-            st.success(f"Энкодер {embedder} загружен")
+            try:
+                # Явно передаем строки, а не None
+                encoder_manager.reinitialize(
+                    provider="ollama", 
+                    ollama_model=str(embedder)  # Явное преобразование в строку
+                )
+                
+                # Перезагружаем коллекцию Qdrant
+                qdrant_manager.init_collection(encoder_manager)
+                
+                # Обновляем сессию
+                st.session_state.encoder = encoder_manager.get_encoder()
+                st.success(f"Эмбеддинги Ollama: {embedder}")
+            except Exception as e:
+                st.error(f"Ошибка перезагрузки энкодера: {e}")
 
         # Определяем поддерживаемые форматы динамически
         supported_formats = ["txt", "pdf", "docx", "csv"]
@@ -76,7 +84,8 @@ def render_sidebar(base_url, model, max_context, max_tokens, temperature, top_p,
         if st.button("🗑 Очистить чат"):
             st.session_state.messages = []
             try:
-                qdrant_manager.clear_collection(st.session_state.encoder)
+                # УБЕДИТЕСЬ ЧТО ПЕРЕДАЕТСЯ encoder_manager, а не encoder
+                qdrant_manager.clear_collection(encoder_manager)  # <-- Тут должно быть encoder_manager
                 if "context_cache" in st.session_state:
                     st.session_state.context_cache.clear()
                 if hasattr(encoder_manager, 'cache'):

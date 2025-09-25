@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - "6333:6333" # HTTP
+      - "6334:6334" # gRPC
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+  chat-app:
+    image: chat-app-image:latest
+    container_name: chat-app
+    depends_on:
+      - qdrant
+    environment:
+      OLLAMA_URL: "http://host.docker.internal:11434"
+      OLLAMA_EMBED_MODEL: "all-minilm"
+      QDRANT_HOST: "qdrant"
+      QDRANT_PORT: "6334"
+    ports:
+      - "8501:8501"
+    restart: unless-stopped

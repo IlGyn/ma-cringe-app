@@ -2,7 +2,7 @@ import html
 import logging
 import streamlit as st
 from urllib.parse import urlparse
-from ..config import Config
+from app.config import Config
 
 # Проверка доступности опциональных библиотек
 try:
